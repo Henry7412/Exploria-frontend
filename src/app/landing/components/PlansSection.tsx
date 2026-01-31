@@ -1,72 +1,67 @@
 "use client";
 
-type Plan = {
-  name: string;
+import { useEffect, useMemo, useState } from "react";
+
+import { isLoggedIn } from "@/src/app/features/chatbot/api/chat.helpers";
+import {
+  getLandingPlans,
+  requestUserPlan,
+} from "@/src/app/features/plans/api/plans.api";
+import type { LandingPlan } from "@/src/app/features/plans/types/plans.types";
+import {
+  formatPricePEN,
+  planFeatures,
+  planLabel,
+  planStyle,
+} from "@/src/app/features/plans/helpers/plans.helpers";
+
+import { getErrorMessage } from "@/src/app/shared/helpers/error.helpers";
+
+type UiPlan = {
+  id: string;
   label: string;
   price: string;
   features: string[];
   bg: string;
   text: string;
   highlight?: boolean;
+  raw: LandingPlan;
 };
 
-const PLANS: Plan[] = [
-  {
-    name: "Free",
-    label: "PLAN FREE",
-    price: "Gratis",
-    features: ["Ideal para nuevos viajeros", "10 créditos", "Solo texto"],
-    bg: "bg-[#F6F6F6]",
-    text: "text-[#151415]",
-  },
-  {
-    name: "Weekly",
-    label: "PLAN WEEKLY",
-    price: "S/. 15",
-    features: ["Perfecto para un viaje corto", "50 créditos", "Texto + Audio"],
-    // 🔥 Ahora toma el color del antiguo MONTHLY
-    bg: "bg-[#FFE3B8]",
-    text: "text-[#151415]",
-  },
-  {
-    name: "Monthly",
-    label: "PLAN MONTHLY",
-    price: "S/. 45",
-    features: [
-      "Explora todo el mes",
-      "200 créditos",
-      "Texto + Audio + Imágenes",
-    ],
-    // 🔥 Ahora toma el color del antiguo ANNUAL
-    bg: "bg-[#FE6E3C]",
-    text: "text-white",
-    highlight: true,
-  },
-];
+function PlanCard({
+  plan,
+  onChoose,
+  loading,
+}: {
+  plan: UiPlan;
+  onChoose: (p: UiPlan) => void;
+  loading?: boolean;
+}) {
+  const isHighlight = !!plan.highlight;
 
-// ...existing code...
-// ...existing code...
-function PlanCard({ plan }: { plan: Plan }) {
-  const isHighlight = plan.highlight;
-
+  // ✅ Igual que Packages
   const headerColor = isHighlight ? "text-white" : "text-[#151415]";
-  const subTextColor = isHighlight ? "text-white/90" : "text-[14px] mt-[2px] opacity-80";
-  const featuresColor = isHighlight ? "text-white opacity-95" : "text-[#555555]";
+  const subTextColor = isHighlight
+    ? "text-white/90"
+    : "text-[14px] mt-[2px] opacity-80";
+  const featuresColor = isHighlight
+    ? "text-white opacity-95"
+    : "text-[#555555]";
 
   return (
     <div
       className={`
         ${plan.bg} ${plan.text}
-        w-[220px]
-        h-[220px]
+        w-[240px]
+        min-h-[260px]
         rounded-[26px]
-        px-7 py-6
+        px-7 pt-6 pb-10
         shadow-[0_18px_40px_rgba(0,0,0,0.08)]
         flex flex-col
       `}
-      style={{ color: isHighlight ? "#FFFFFF" : undefined }} // FORZAR blanco cuando destaque
+      style={{ color: isHighlight ? "#FFFFFF" : undefined }}
     >
-      {/* Encabezado */}
+      {/* ✅ Encabezado (IGUAL QUE PAQUETES) */}
       <div className="text-center mb-3">
         <p
           className={`text-[15px] tracking-wide font-extrabold ${headerColor}`}
@@ -78,31 +73,135 @@ function PlanCard({ plan }: { plan: Plan }) {
         <p className={subTextColor}>Costo</p>
 
         <p
-          className={`text-[16px] mt-[2px] font-extrabold ${isHighlight ? "text-white" : ""}`}
+          className={`text-[16px] mt-[2px] font-extrabold ${
+            isHighlight ? "text-white" : ""
+          }`}
           style={{ fontWeight: 800 }}
         >
           {plan.price}
         </p>
       </div>
 
-      {/* Lista de beneficios */}
-      <ul className={`text-[14px] leading-[1.45] space-y-[4px] ${featuresColor} ${isHighlight ? "marker:text-white" : ""}`}>
+      {/* Features */}
+      <ul
+        className={`text-[14px] leading-[1.45] space-y-[4px] ${featuresColor} ${
+          isHighlight ? "marker:text-white" : ""
+        }`}
+      >
         {plan.features.map((f) => (
           <li key={f} className="list-disc ml-4">
             {f}
           </li>
         ))}
       </ul>
+
+      {/* Button */}
+      <div className="mt-3 flex justify-center">
+        <button
+          onClick={() => onChoose(plan)}
+          disabled={loading}
+          className={`
+            w-[150px]
+            h-[36px]
+            rounded-full
+            text-[13px]
+            font-medium
+            transition
+            bg-[#F5F5F5]
+            text-[#111111]
+            border border-[#DADADA]
+            ${loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#EDEDED]"}
+          `}
+        >
+          {loading ? "Procesando..." : "Elegir plan"}
+        </button>
+      </div>
     </div>
   );
 }
 
-export default function PlansSection() {
-  return (
-    <section id="planes" className="w-full bg-white flex justify-center py-[10px] scroll-mt-[100px]">
 
+export default function PlansSection() {
+  const [plans, setPlans] = useState<LandingPlan[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [requestingId, setRequestingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await getLandingPlans();
+        if (!mounted) return;
+
+        setPlans(res?.data?.user ?? []);
+      } catch (e: unknown) {
+        setError(getErrorMessage(e, "Error cargando planes"));
+      } finally {
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const uiPlans: UiPlan[] = useMemo(() => {
+    return plans.map((p) => {
+      const style = planStyle(p.name);
+
+      // ✅ Free sin amount => Gratis
+      const price =
+        !p.amount || p.amount === 0 ? "Gratis" : formatPricePEN(p.amount);
+
+      return {
+        id: p._id,
+        label: planLabel(p.name),
+        price,
+        features: planFeatures(p),
+        bg: style.bg,
+        text: style.text,
+        highlight: style.highlight,
+        raw: p,
+      };
+    });
+  }, [plans]);
+
+  const onChoose = async (plan: UiPlan) => {
+    setError(null);
+    setSuccess(null);
+
+    if (!isLoggedIn()) {
+      setError("Primero inicia sesión para solicitar un plan.");
+      return;
+    }
+
+    try {
+      setRequestingId(plan.id);
+
+      const res = await requestUserPlan({
+        plan: plan.id,
+        annual: false,
+      });
+
+      setSuccess(`Solicitud enviada ✅ Código de orden: ${res.orderCode}`);
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, "No se pudo solicitar el plan"));
+    } finally {
+      setRequestingId(null);
+    }
+  };
+
+  return (
+    <section
+      id="planes"
+      className="w-full bg-white flex justify-center py-[10px] scroll-mt-[100px]"
+    >
       <div className="max-w-[1100px] w-full px-[40px]">
-        {/* título / subtítulo */}
         <div className="text-center mb-[40px]">
           <p className="text-[#FE6E3C] text-[25px] font-semibold uppercase tracking-[0.2em] mb-[8px]">
             Nuestros planes
@@ -112,14 +211,27 @@ export default function PlansSection() {
             <br />
             a tus necesidades
           </h2>
+
+          {loading && (
+            <p className="mt-3 text-sm opacity-70">Cargando planes...</p>
+          )}
+
+          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+
+          {success && <p className="mt-3 text-sm text-green-600">{success}</p>}
         </div>
 
-        {/* Cards */}
         <div className="flex justify-center">
-          <div className="flex gap-[26px]">
-            {PLANS.map((plan) => (
-              <PlanCard key={plan.name} plan={plan} />
-            ))}
+          <div className="flex gap-[26px] flex-wrap justify-center">
+            {!loading &&
+              uiPlans.map((plan) => (
+                <PlanCard
+                  key={plan.id}
+                  plan={plan}
+                  onChoose={onChoose}
+                  loading={requestingId === plan.id}
+                />
+              ))}
           </div>
         </div>
       </div>

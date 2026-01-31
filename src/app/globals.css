@@ -1,17 +1,24 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@config "../../tailwind.config.js";
+@import "tailwindcss";
 
-/* Fuente base y colores */
+/* Base */
+:root {
+  --bg: #ffffff;
+  --text: #151415;
+}
+
+html, body {
+  height: 100%;
+}
+
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: #FFFFFF;
-  color: #151415;
-  width: 100%;
+  background: var(--bg);
+  color: var(--text);
   margin: 0;
   padding: 0;
 }
 
+/* Animación propia */
 @keyframes scaleIn {
   from {
     opacity: 0;
@@ -26,4 +33,3 @@ body {
 .animate-scaleIn {
   animation: scaleIn 0.25s ease-out;
 }
-

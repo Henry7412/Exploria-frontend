@@ -6,18 +6,22 @@ import LoginForm from "./LoginForm";
 type Props = {
   open: boolean;
   onClose: () => void;
-  onOpenRegister: () => void; // <-- para pasarlo al formulario
+  onOpenRegister: () => void;
+  onOpenForgot: () => void; // ✅ lo recibe del padre (LandingPage)
 };
 
-export default function LoginModal({ open, onClose, onOpenRegister }: Props) {
+export default function LoginModal({
+  open,
+  onClose,
+  onOpenRegister,
+  onOpenForgot,
+}: Props) {
   if (!open) return null;
 
   return (
     <>
-      {/* OVERLAY */}
       <div className="fixed inset-0 bg-black/90 z-[99998]" onClick={onClose} />
 
-      {/* MODAL */}
       <div
         className="
           fixed z-[99999]
@@ -30,28 +34,24 @@ export default function LoginModal({ open, onClose, onOpenRegister }: Props) {
         "
         onClick={(e) => e.stopPropagation()}
       >
-        {/* BOTÓN "X" */}
         <button
           onClick={onClose}
           aria-label="Cerrar"
           className="
-            absolute
-            top-[18px] right-[18px]
-            w-7 h-7
-            flex items-center justify-center
-            rounded-full
-            bg-transparent
-            hover:bg-black/10
-            border-none
+            absolute top-[18px] right-[18px]
+            w-7 h-7 flex items-center justify-center
+            rounded-full bg-transparent hover:bg-black/10 border-none
           "
         >
           <X className="w-[20px] h-[20px] text-[#FE6E3C]" />
         </button>
 
-        {/* CONTENIDO */}
         <div className="px-12 py-12">
-          <LoginForm onOpenRegister={onOpenRegister} onClose={onClose} />
-
+          <LoginForm
+            onOpenRegister={onOpenRegister}
+            onClose={onClose}
+            onOpenForgot={onOpenForgot} // ✅
+          />
         </div>
       </div>
     </>

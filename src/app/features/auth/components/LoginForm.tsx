@@ -9,9 +9,10 @@ import InputField from "./InputFiled";
 type Props = {
   onOpenRegister: () => void;
   onClose: () => void;
+  onOpenForgot: () => void;
 };
 
-export default function LoginForm({ onOpenRegister, onClose }: Props) {
+export default function LoginForm({ onOpenRegister, onClose, onOpenForgot }: Props) {
   const router = useRouter();
 
   const [form, setForm] = useState<LoginPayload>({
@@ -49,8 +50,17 @@ export default function LoginForm({ onOpenRegister, onClose }: Props) {
       });
 
       localStorage.setItem("accessToken", resp.accessToken);
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          names: resp.user.names,
+          lastNames: resp.user.lastNames,
+        })
+      );
+      window.dispatchEvent(new Event("storage"));
       onClose(); // ✅ cierra modal
       router.push("/"); // ✅ redirige al landing
+
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Credenciales incorrectas");
     } finally {
@@ -101,7 +111,7 @@ export default function LoginForm({ onOpenRegister, onClose }: Props) {
             type="button"
             className="text-sm text-[#FE6E3C] font-medium hover:underline transition bg-transparent border-none outline-none"
             style={{ padding: 0 }}
-            onClick={() => alert("Funcionalidad pendiente")}
+            onClick={onOpenForgot}
           >
             ¿Olvidaste tu contraseña?
           </button>

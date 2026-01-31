@@ -24,3 +24,24 @@ export type LoginPayload = {
   emailOrPhone: string;
   password: string;
 };
+
+export type ApiEnvelope<T = unknown> = {
+  data?: {
+    message?: string;
+    data?: T;
+  };
+};
+
+export type LoginResponse = {
+  accessToken: string;
+  user: {
+    names: string;
+    lastNames: string;
+    email: string | null;
+    phoneNumber: string | null;
+    picture?: string | null;
+  };
+};
+
+export type ForgotPasswordPayload = { email: string };
+export type ResetPasswordPayload = { token: string; newPassword: string };
